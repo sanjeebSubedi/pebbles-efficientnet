@@ -139,5 +139,6 @@ model = EfficientNetCustom(vars.model_name, input_channels=3, num_classes=num_cl
 optimizer = adam(model, vars.learning_rate)
 loss_func = criterion()
 scheduler = lr_scheduler(optimizer, factor=0.1, patience=3, verbose=2)
-trained_model = train_model(model, train_loader, optimizer=optimizer, loss_func=loss_func,
+train_model(model, train_loader, optimizer=optimizer, loss_func=loss_func,
             num_epochs=vars.num_epochs, lr_scheduler=scheduler, valid_loader=valid_loader)
+torch.save(model.state_dict(), '/content/drive/MyDrive/Inspiring/models/pollen-eff-b2.pt')
