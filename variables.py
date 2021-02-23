@@ -2,7 +2,7 @@ import multiprocessing
 from efficientnet_pytorch import EfficientNet
 
 root_dir = '/content/drive/MyDrive/Inspiring/datasets_train'
-model_name = 'efficientnet-b0'
+model_name = 'efficientnet-b2'
 image_size = EfficientNet.get_image_size(model_name)
 rgb_mean = [0.0176, 0.0169, 0.0160]
 rgb_std = [0.1016, 0.0977, 0.0905]
