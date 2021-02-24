@@ -52,9 +52,12 @@ def oversample_data(root_dir, dataset):
   sampler = WeightedRandomSampler(sample_weights, num_samples=len(sample_weights),
                                   replacement=True)
   return sampler
-torch.manual_seed(42)
+
 def load_data(root_dir, transformations, train_split, num_workers, train_batch_size, valid_batch_size, is_test_set=False):
   dataset = ImageFolder(root_dir, transform=transformations)
+  global indices
+  indices = dataset.class_to_idx
+  indices = {y:x for x,y in indices.items()}
   global num_classes, train_size, valid_size, dataset_size
   num_classes = len(dataset.classes)
   dataset_size = len(dataset)
@@ -106,15 +109,18 @@ def train_model(model, train_loader, optimizer, loss_func, num_epochs, lr_schedu
     loss_after_epoch /= 100
     print(f'Epoch: {epoch}/{num_epochs}  Acc: {(accuracy_after_epoch/num_labels):.5f}  Loss: {loss_after_epoch:.5f} Duration: {(time.time()-start_time):.2f}s', end='  ' if valid_loader is not None else '\n')
     if valid_loader is not None:
-      val_acc, val_loss = validate_model(model, valid_loader, loss_func)
-      print(f'Val_acc: {val_acc:.5f}  Val_loss: {(val_loss/100):.5f}')
-      lr_scheduler.step(val_loss)
+      if epoch == num_epochs:
+        validate_model(model, valid_loader, loss_func, lr_scheduler, plot_cm=True)
+      else:
+        validate_model(model, valid_loader, loss_func, lr_scheduler, plot_cm=False)
+  return
 
 
-def validate_model(model, valid_loader, loss_func):
+def validate_model(model, valid_loader, loss_func, lr_scheduler, plot_cm=False):
   model.to(device)
   model.eval()
   val_acc, val_loss = 0,0
+  true_labels, pred_labels = [], []
   num_labels=0
   with torch.no_grad():
     for batch in valid_loader:
@@ -123,8 +129,29 @@ def validate_model(model, valid_loader, loss_func):
       val_loss += loss_func(preds, labels)
       val_acc += get_num_correct(preds,labels)
       num_labels += torch.numel(labels)
-    val_acc /= num_labels
-    return val_acc, val_loss
+      if plot_cm:
+        pred_labels += preds.argmax(dim=1)
+        true_labels += labels
+    
+  val_acc /= num_labels
+  print(f'Val_acc: {val_acc:.5f}  Val_loss: {(val_loss/100):.5f}')
+  lr_scheduler.step(val_loss)
+  if plot_cm:
+    pred_labels = [x.item() for x in pred_labels]
+    true_labels = [x.item() for x in true_labels]
+    show_confusion_matrix(pred_labels, true_labels)
+  return
+
+def show_confusion_matrix(predicted_labels, true_labels):
+  from sklearn.metrics import confusion_matrix
+  import seaborn as sns
+  import matplotlib.pyplot as plt
+  plt.figure(figsize=(8,6))
+  cm = confusion_matrix(predicted_labels, true_labels)
+  sns.heatmap(cm, annot=True, linewidths=.5, cmap='YlGnBu', annot_kws={"size": 10},
+              fmt="g", xticklabels = [indices.get(x) for x in range(0, 9)],
+              yticklabels = [indices.get(y) for y in range(0,9)])
+  return
 
 tfms = transforms.Compose([transforms.Resize(vars.image_size),transforms.ToTensor(),
                                       transforms.Normalize(vars.rgb_mean, vars.rgb_std)])
