@@ -11,19 +11,6 @@ import pickle
 import variables as vars
 from customEfficientNet import EfficientNetCustom
 
-# dataset = ImageFolder(root_dir, transform=transformations)
-# loader = DataLoader(dataset, batch_size=64, shuffle=True)
-# def get_mean_std(loader):
-#   channels_sum, channels_squared_sum, num_batches = 0,0,0
-#   for data, _ in loader:
-#     channels_sum += torch.mean(data, dim=[0,2,3])
-#     channels_squared_sum += torch.mean(data**2, dim=[0,2,3])
-#     num_batches += 1
-#   mean = channels_sum/num_batches
-#   std = torch.sqrt((channels_squared_sum/num_batches - mean**2))
-#   return mean, std
-# mean, std = get_mean_std(loader)
-
 def set_device():
   global device
   device = torch.device('cuda' if torch.cuda.is_available else 'cpu')
@@ -160,7 +147,7 @@ def save_onnx(model):
   input = torch.randn(2, 3, vars.image_size, vars.image_size)
   torch.onnx.export(model, input, vars.model_save_dir+'efficientnet-b2.onnx',
                     verbose=True)
-  print('Model successfully to onnx file.')
+  print('Model successfully saved in onnx format.')
   return
 
 tfms = transforms.Compose([transforms.Resize(vars.image_size),transforms.ToTensor(),
