@@ -42,8 +42,7 @@ def preprocess_img(img):
   # elif isinstance(img, torch.Tensor):
   #   image = Image.fromarray(img.numpy()).convert('RGB')
   # else:
-  #   raise Exception(f'type of `img` should be any of tensor, numpy array or a path to an image, not {type(img)}.')
-  
+  #   raise Exception(f'type of `img` should be any of tensor, numpy array or a path to an image, not {type(img)}.')-
   tfms = transforms.Compose([transforms.Resize(image_size),transforms.ToTensor(),
                              transforms.Normalize([0.485, 0.456, 0.406],
                                                   [0.229, 0.224, 0.225])])
@@ -51,28 +50,41 @@ def preprocess_img(img):
   image = image.unsqueeze(0)
   return image
   
-def predict(model, preprocessed_img):
-  model.eval()
-  pred = model(preprocessed_img)
+def predict_pt(model_path, preprocessed_img):
+  loaded_model = InferenceModel(model_name)
+  loaded_model.load_state_dict(torch.load(model_path, map_location='cpu'))
+  loaded_model.eval()
+  pred = loaded_model(preprocessed_img)
   pred = np.argmax(pred.detach().numpy())
   return pred
+
+def predict_onnx(model_path, preprocessed_img):
+  import onnx
+  import onnxruntime as ort
+  onnx_model = ort.InferenceSession(model_path)
+  pred = onnx_model.run(None, {'input.1': preprocessed_img.numpy()})
+  pred = np.argmax(pred)
+  return pred
+
 
 model_name = 'efficientnet-b2'
 global image_size 
 image_size = EfficientNet.get_image_size(model_name)
-model_path = '/content/drive/MyDrive/Inspiring/models/pollen-eff-b2.pt'
+model_path = '/content/drive/MyDrive/Inspiring/models/pollen-eff-b2.onnx'
+model_onnx = True if '.onnx' in model_path else False
 test_dir = '/content/drive/MyDrive/Inspiring/datasets_test'
-
-loaded_model = InferenceModel(model_name)
-loaded_model.load_state_dict(torch.load(model_path, map_location='cpu'))
 
 res = []
 for root_dir, subdir, files in os.walk(test_dir):
   for img in files:
     img_path = os.path.join(root_dir, img)
     pp_img = preprocess_img(img_path)
-    pred = predict(loaded_model, pp_img)
+    if model_onnx:
+      pred = predict_onnx(model_path, pp_img)
+    else:
+      pred = predict_pt(model_path, pp_img)
     res.append(index_to_label(pred, test_dir))
+    
 from collections import Counter
 counts = Counter(res)
 print(counts)
