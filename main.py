@@ -153,8 +153,18 @@ def show_confusion_matrix(predicted_labels, true_labels):
               yticklabels = [indices.get(y) for y in range(0,9)])
   return
 
+def save_onnx(model):
+  model.eval()
+  model.to('cpu')
+  model.features.set_swish(memory_efficient=False)
+  input = torch.randn(2, 3, vars.image_size, vars.image_size)
+  torch.onnx.export(model, input, vars.model_save_dir+'efficientnet-b2.onnx',
+                    verbose=True)
+  print('Model successfully to onnx file.')
+  return
+
 tfms = transforms.Compose([transforms.Resize(vars.image_size),transforms.ToTensor(),
-                                      transforms.Normalize(vars.rgb_mean, vars.rgb_std)])
+                                        transforms.Normalize(vars.rgb_mean, vars.rgb_std)])
 
 set_device()
 train_loader, valid_loader = load_data(vars.root_dir, transformations=tfms, num_workers=vars.num_workers,
@@ -169,3 +179,4 @@ scheduler = lr_scheduler(optimizer, factor=0.1, patience=3, verbose=2)
 train_model(model, train_loader, optimizer=optimizer, loss_func=loss_func,
             num_epochs=vars.num_epochs, lr_scheduler=scheduler, valid_loader=valid_loader)
 torch.save(model.state_dict(), '/content/drive/MyDrive/Inspiring/models/pollen-eff-b2.pt')
+save_onnx(model)
