@@ -14,3 +14,4 @@ train_split = 0.8
 learning_rate = 0.0001
 load_pretrained_weights = True
 train_only_last_layer = False
+model_save_dir = '/content/drive/MyDrive/Inspiring/models/'
