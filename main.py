@@ -10,6 +10,7 @@ import time
 import pickle
 import variables as vars
 from customEfficientNet import EfficientNetCustom
+from sam import SAM
 
 
 def set_device():
@@ -67,7 +68,9 @@ def load_data(root_dir, transformations, train_split, num_workers, train_batch_s
 
 
 def adam(model, lr):
-    return optim.Adam(model.parameters(), lr=lr)
+  base_optimizer = optim.Adam
+  optimizer = SAM(model.parameters(), base_optimizer, lr=lr)
+  return optimizer
 
 
 def criterion():
@@ -96,9 +99,14 @@ def train_model(model, train_loader, optimizer, loss_func, num_epochs, lr_schedu
             preds = model(images)
             loss = loss_func(preds, labels)
 
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
             loss.backward()
-            optimizer.step()
+            optimizer.first_step(zero_grad=True)
+            # optimizer.step()
+
+            preds= model(images)
+            loss_func(preds, labels).backward()
+            optimizer.second_step(zero_grad=True)
 
             loss_after_epoch += loss
             accuracy_after_epoch += get_num_correct(preds, labels)
@@ -135,7 +143,7 @@ def validate_model(model, valid_loader, loss_func, lr_scheduler, plot_cm=False):
 
     val_acc /= num_labels
     print(f'Val_acc: {val_acc:.5f}  Val_loss: {(val_loss/100):.5f}')
-    lr_scheduler.step(val_loss)
+    lr_scheduler.step(val_acc)
     if plot_cm:
         pred_labels = [x.item() for x in pred_labels]
         true_labels = [x.item() for x in true_labels]
